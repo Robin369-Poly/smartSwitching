@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robin Tech Shop</title>
+
+<style>
+body{
+    font-family: Arial;
+    margin:0;
+    background:#f2f2f2;
+}
+
+header{
+    background:#0d1117;
+    color:white;
+    text-align:center;
+    padding:15px;
+    font-size:22px;
+}
+
+.search{
+    padding:10px;
+    text-align:center;
+}
+
+.search input{
+    width:90%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+.cart-box{
+    position:fixed;
+    top:10px;
+    right:10px;
+    background:#25D366;
+    color:white;
+    padding:10px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.category{
+    padding:10px 15px;
+    font-size:18px;
+    font-weight:bold;
+}
+
+.product{
+    background:white;
+    margin:10px 15px;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 0 5px #ccc;
+}
+
+.product img{
+    width:100%;
+    border-radius:10px;
+}
+
+.price{
+    color:green;
+    font-weight:bold;
+}
+
+.add{
+    display:block;
+    text-align:center;
+    padding:10px;
+    margin-top:8px;
+    border-radius:8px;
+    background:#007bff;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#cart{
+    display:none;
+    position:fixed;
+    top:60px;
+    right:10px;
+    width:280px;
+    background:white;
+    padding:10px;
+    border-radius:10px;
+    box-shadow:0 0 10px #999;
+    max-height:400px;
+    overflow:auto;
+}
+
+.btn{
+    display:block;
+    text-align:center;
+    padding:10px;
+    margin-top:8px;
+    border-radius:8px;
+    background:#25D366;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.remove{
+    color:red;
+    cursor:pointer;
+    font-size:12px;
+}
+
+footer{
+    text-align:center;
+    padding:10px;
+    background:#0d1117;
+    color:white;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+⚡ Robin Tech Shop
+</header>
+
+<div class="search">
+<input type="text" id="searchBox" onkeyup="searchProduct()" placeholder="Search product...">
+</div>
+
+<div class="cart-box" onclick="toggleCart()">
+🛒 Cart (<span id="count">0</span>) | ৳<span id="total">0</span>
+</div>
+
+<div id="cart">
+<h3>Your Cart</h3>
+<ul id="cartItems"></ul>
+<p><b>Total: ৳<span id="cartTotal">0</span></b></p>
+<button onclick="orderWhatsApp()" class="btn">Checkout on WhatsApp</button>
+</div>
+
+<!-- PRODUCTS -->
+
+<div class="category">📡 IoT Modules</div>
+
+<div class="product" data-name="esp8266 nodemcu" data-price="250">
+<img src="https://via.placeholder.com/400x250">
+<h3>ESP8266 NodeMCU</h3>
+<p class="price">৳250</p>
+<button class="add" onclick="addCart('ESP8266 NodeMCU',250)">Add to Cart</button>
+</div>
+
+<div class="category">🔌 Power</div>
+
+<div class="product" data-name="18650 battery" data-price="180">
+<img src="https://via.placeholder.com/400x250">
+<h3>18650 Battery</h3>
+<p class="price">৳180</p>
+<button class="add" onclick="addCart('18650 Battery',180)">Add to Cart</button>
+</div>
+
+<div class="product" data-name="5v adapter" data-price="120">
+<img src="https://via.placeholder.com/400x250">
+<h3>5V Adapter</h3>
+<p class="price">৳120</p>
+<button class="add" onclick="addCart('5V Adapter',120)">Add to Cart</button>
+</div>
+
+<div class="category">💡 LED</div>
+
+<div class="product" data-name="led strip" data-price="250">
+<img src="https://via.placeholder.com/400x250">
+<h3>LED Strip Light</h3>
+<p class="price">৳250</p>
+<button class="add" onclick="addCart('LED Strip Light',250)">Add to Cart</button>
+</div>
+
+<footer>
+© Robin Tech Shop | WhatsApp: +8801533818395
+</footer>
+
+<script>
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+function updateCart(){
+    let list = document.getElementById("cartItems");
+    list.innerHTML = "";
+    let total = 0;
+
+    cart.forEach((item,index)=>{
+        total += item.price;
+
+        let li = document.createElement("li");
+        li.innerHTML = item.name + " - ৳" + item.price +
+        ' <span class="remove" onclick="removeItem('+index+')">X</span>';
+        list.appendChild(li);
+    });
+
+    document.getElementById("count").innerText = cart.length;
+    document.getElementById("total").innerText = total;
+    document.getElementById("cartTotal").innerText = total;
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+function addCart(name,price){
+    cart.push({name,price});
+    updateCart();
+}
+
+function removeItem(index){
+    cart.splice(index,1);
+    updateCart();
+}
+
+function toggleCart(){
+    let c = document.getElementById("cart");
+    c.style.display = (c.style.display === "block") ? "none" : "block";
+}
+
+function orderWhatsApp(){
+    let number = "8801533818395";
+    let text = "Hello, I want to order:%0A";
+
+    cart.forEach(item=>{
+        text += item.name + " - ৳" + item.price + "%0A";
+    });
+
+    text += "%0ATotal: ৳" + document.getElementById("total").innerText;
+
+    let url = "https://wa.me/" + number + "?text=" + text;
+    window.open(url,"_blank");
+}
+
+function searchProduct(){
+    let input = document.getElementById("searchBox").value.toLowerCase();
+    let products = document.getElementsByClassName("product");
+
+    for(let p of products){
+        let name = p.getAttribute("data-name");
+        if(name.includes(input)){
+            p.style.display="block";
+        }else{
+            p.style.display="none";
+        }
+    }
+}
+
+updateCart();
+</script>
+
+</body>
+</html>

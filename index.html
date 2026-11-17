@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robin Smart Home</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9;color:#172033}
+header{background:#123b67;color:white;padding:20px 16px}h1{font-size:22px;margin:0 0 5px}
+nav{display:flex;gap:8px;padding:12px;background:white;position:sticky;top:0}
+button{border:0;border-radius:10px;padding:11px 14px;background:#1769aa;color:white;font-weight:bold}
+nav button{flex:1}.tab{display:none;padding:14px}.tab.active{display:block}
+.card{background:white;border-radius:14px;padding:15px;margin:10px 0;box-shadow:0 2px 8px #0001}
+input,select{width:100%;padding:12px;border:1px solid #ccd5df;border-radius:9px;margin:6px 0 12px;font-size:15px}
+.small{color:#657286;font-size:13px}.relay{display:flex;align-items:center;justify-content:space-between}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#111827;color:#d7f5df;padding:12px;border-radius:10px;font-size:12px}
+button.off{background:#667085}button.green{background:#16834b}
+</style></head><body>
+<header><h1>Robin Smart Home</h1><div>ESP8266 NodeMCU V3 · 4 Relay Controller</div></header>
+<nav><button onclick="show('control')">কন্ট্রোল</button><button onclick="show('builder')">কোড তৈরি</button></nav>
+<section id="control" class="tab active">
+<div class="card"><b>ESP8266 Local Wi-Fi</b><p class="small">ESP8266-এর IP ঠিকানা লিখুন (যেমন 192.168.4.1)। বোর্ডে উপযুক্ত firmware থাকতে হবে।</p>
+<input id="ip" placeholder="ESP8266 IP address" value="192.168.4.1"></div>
+<div id="relays"></div><div class="card"><button onclick="getStatus()">স্ট্যাটাস দেখুন</button><p id="status" class="small">বোর্ডের সাথে সংযোগের জন্য একই Wi-Fi-তে থাকুন।</p></div>
+</section>
+<section id="builder" class="tab">
+<div class="card"><b>Wi-Fi সেটিংস</b><input id="ssid" placeholder="Wi-Fi নাম (SSID)"><input id="pass" placeholder="Wi-Fi Password" type="text"></div>
+<div class="card"><b>রিলে GPIO সেটিংস</b><div id="pins"></div><button onclick="makeCode()">Arduino কোড তৈরি করুন</button></div>
+<div class="card"><button onclick="copyCode()">কোড কপি</button> <button onclick="downloadCode()">.ino ডাউনলোড</button><pre id="code">কোড তৈরি করলে এখানে দেখা যাবে।</pre></div>
+<p class="small">নোট: এটি Arduino IDE-তে কম্পাইল ও ESP8266-এ আপলোড করতে হবে। GPIO D3/D4 বুট সমস্যা করতে পারে।</p>
+</section>
+<script>
+const names=['Relay 1','Relay 2','Relay 3','Relay 4'], defaults=['D1','D2','D5','D6'];
+let code='';
+function show(id){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active')}
+document.getElementById('relays').innerHTML=names.map((n,i)=>`<div class="card relay"><b>${n}</b><button id="r${i}" onclick="toggle(${i})">ON / OFF</button></div>`).join('');
+document.getElementById('pins').innerHTML=names.map((n,i)=>`<label>${n}</label><select id="p${i}">${['D1','D2','D5','D6','D0','D7','D8'].map(p=>`<option ${p===defaults[i]?'selected':''}>${p}</option>`).join('')}</select>`).join('');
+let states=[0,0,0,0];
+async function toggle(i){states[i]=1-states[i];document.getElementById('r'+i).className=states[i]?'green':'off';document.getElementById('status').textContent='Relay '+(i+1)+' command পাঠানো হচ্ছে...';try{let ip=document.getElementById('ip').value.trim();let r=await fetch('http://'+ip+'/api/set?relay='+(i+1)+'&state='+states[i]);document.getElementById('status').textContent=r.ok?'কমান্ড পাঠানো হয়েছে।':'বোর্ডের উত্তর পাওয়া যায়নি।'}catch(e){document.getElementById('status').textContent='সংযোগ হয়নি। IP ও Wi-Fi পরীক্ষা করুন।'}}
+async function getStatus(){try{let ip=document.getElementById('ip').value.trim();let r=await fetch('http://'+ip+'/api/status');document.getElementById('status').textContent=await r.text()}catch(e){document.getElementById('status').textContent='স্ট্যাটাস পাওয়া যায়নি।'}}
+function makeCode(){let pins=defaults.map((_,i)=>document.getElementById('p'+i).value);let ssid=document.getElementById('ssid').value.replace(/\\/g,'\\\\').replace(/"/g,'\\"');let pass=document.getElementById('pass').value.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+code=`#include <ESP8266WiFi.h>\n#include <ESP8266WebServer.h>\nconst char* ssid="${ssid}";\nconst char* password="${pass}";\nESP8266WebServer server(80);\nint pins[4]={${pins.map(p=>'D'+p.slice(1)).join(',')}};\nvoid setup(){\n Serial.begin(115200);\n for(int i=0;i<4;i++){pinMode(pins[i],OUTPUT);digitalWrite(pins[i],HIGH);}\n WiFi.begin(ssid,password); while(WiFi.status()!=WL_CONNECTED){delay(500);}\n server.on("/api/set",[](){int r=server.arg("relay").toInt()-1;int s=server.arg("state").toInt();if(r>=0&&r<4){digitalWrite(pins[r],s?LOW:HIGH);server.send(200,"text/plain","OK");}else server.send(400,"text/plain","Bad relay");});\n server.on("/api/status",[](){server.send(200,"text/plain","ESP8266 online");});\n server.begin();}\nvoid loop(){server.handleClient();}\n`;
+document.getElementById('code').textContent=code}
+function copyCode(){if(!code){makeCode()}navigator.clipboard?.writeText(code).then(()=>alert('কোড কপি হয়েছে')).catch(()=>alert('কপি সুবিধা পাওয়া যায়নি'))}
+function downloadCode(){if(!code)makeCode();let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([code],{type:'text/plain'}));a.download='Robin_Smart_Home.ino';a.click();URL.revokeObjectURL(a.href)}
+</script></body></html>
